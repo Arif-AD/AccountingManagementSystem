@@ -1,6 +1,6 @@
 import { Form, Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
-import type { SharedPageProps } from '../types';
+import type { SharedPageProps } from '../types/index.ts';
 
 const primaryNavigation = [
     { label: 'Dashboard', href: '/dashboard', active: true },
@@ -18,7 +18,8 @@ const upcomingNavigation = [
 ];
 
 export default function AuthenticatedLayout({ children }: PropsWithChildren) {
-    const { auth } = usePage<SharedPageProps>().props;
+    const page = usePage();
+    const { auth } = page.props as any as SharedPageProps;
     const user = auth.user;
 
     return (

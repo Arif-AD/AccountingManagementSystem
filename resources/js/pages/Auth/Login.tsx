@@ -16,7 +16,7 @@ export default function Login() {
                     <h1 className="mt-3 text-3xl font-semibold tracking-tight">Sign in to Ledgerly</h1>
                     <p className="mt-2 text-sm text-[#617268]">Use your workspace credentials to continue.</p>
                     <Form method="post" action="/login" className="mt-9 space-y-5">
-                        {({ errors, processing }) => (
+                        {({ errors, processing }: { errors: Record<string, string>; processing: boolean }) => (
                             <>
                                 <label className="block text-sm font-medium">Email address<input name="email" type="email" autoComplete="email" className="mt-2 block w-full rounded-lg border border-[#cad7cc] bg-white px-4 py-3 outline-none transition focus:border-[#17352d] focus:ring-2 focus:ring-[#d9e96d]" />{errors.email && <span className="mt-2 block text-xs text-red-700">{errors.email}</span>}</label>
                                 <label className="block text-sm font-medium">Password<input name="password" type="password" autoComplete="current-password" className="mt-2 block w-full rounded-lg border border-[#cad7cc] bg-white px-4 py-3 outline-none transition focus:border-[#17352d] focus:ring-2 focus:ring-[#d9e96d]" />{errors.password && <span className="mt-2 block text-xs text-red-700">{errors.password}</span>}</label>

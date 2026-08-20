@@ -23,4 +23,5 @@ export interface SharedPageProps {
         user: User | null;
     };
     errors: Record<string, string>;
+    [key: string]: any;
 }
