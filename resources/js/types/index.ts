@@ -25,3 +25,31 @@ export interface SharedPageProps {
     errors: Record<string, string>;
     [key: string]: any;
 }
+
+export interface JournalEntryLine {
+    id: number;
+    chart_of_account_id: number;
+    description: string | null;
+    debit: string;
+    credit: string;
+    account: Pick<ChartOfAccount, 'id' | 'code' | 'name'>;
+}
+
+export interface JournalEntry {
+    id: number;
+    journal_number: string;
+    transaction_date: string;
+    description: string | null;
+    status: 'draft' | 'posted';
+    created_by: number;
+    creator: Pick<User, 'id' | 'name'>;
+    lines?: JournalEntryLine[];
+    lines_sum_debit?: string;
+}
+
+export interface Paginated<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    total: number;
+}

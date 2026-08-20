@@ -5,10 +5,10 @@ import type { SharedPageProps } from '../types/index.ts';
 const primaryNavigation = [
     { label: 'Dashboard', href: '/dashboard', active: true },
     { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts', active: true },
+    { label: 'Journal Entries', href: '/accounting/journal-entries', active: true },
 ];
 
 const upcomingNavigation = [
-    'Transactions',
     'Journal Upload',
     'General Ledger',
     'Trial Balance',
