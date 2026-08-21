@@ -40,11 +40,13 @@ export interface JournalEntry {
     journal_number: string;
     transaction_date: string;
     description: string | null;
-    status: 'draft' | 'posted';
+    status: 'draft' | 'pending' | 'approved' | 'posted';
     created_by: number;
+    created_at: string;
     creator: Pick<User, 'id' | 'name'>;
     lines?: JournalEntryLine[];
     lines_sum_debit?: string;
+    lines_sum_credit?: string;
 }
 
 export interface Paginated<T> {

@@ -58,6 +58,7 @@ class JournalEntryTest extends TestCase
         $journal = JournalEntry::first();
         $response->assertRedirect(route('accounting.journal-entries.show', $journal));
         $this->assertSame('JV-000001', $journal->journal_number);
+        $this->assertSame('draft', $journal->status);
         $this->assertCount(2, $journal->lines);
     }
 
@@ -138,5 +139,115 @@ class JournalEntryTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Accounting/JournalEntries/Show')
                 ->where('journal.journal_number', 'JV-000001'));
+    }
+
+    public function test_accountant_can_edit_and_delete_draft_journal(): void
+    {
+        $accountant = User::factory()->create(['role' => 'accountant']);
+        $journal = $this->createDraft($accountant);
+
+        $this->actingAs($accountant)->get(route('accounting.journal-entries.edit', $journal))->assertOk();
+        $this->put(route('accounting.journal-entries.update', $journal), $this->journalPayload($journal, 'Updated draft'))
+            ->assertRedirect(route('accounting.journal-entries.show', $journal));
+        $this->assertDatabaseHas('journal_entries', ['id' => $journal->id, 'description' => 'Updated draft']);
+
+        $this->delete(route('accounting.journal-entries.destroy', $journal))->assertRedirect(route('accounting.journal-entries.index'));
+        $this->assertDatabaseMissing('journal_entries', ['id' => $journal->id]);
+        $this->assertDatabaseCount('journal_entry_lines', 0);
+    }
+
+    public function test_accountant_can_post_approved_journal_and_posted_journal_is_immutable(): void
+    {
+        $accountant = User::factory()->create(['role' => 'accountant']);
+        $manager = User::factory()->create(['role' => 'manager']);
+        $journal = $this->createDraft($accountant);
+
+        $this->actingAs($accountant)->post(route('accounting.journal-entries.submit', $journal));
+        $this->actingAs($manager)->post(route('accounting.journal-entries.approve', $journal));
+        $this->actingAs($accountant)->post(route('accounting.journal-entries.post', $journal))
+            ->assertRedirect(route('accounting.journal-entries.show', $journal));
+        $this->assertDatabaseHas('journal_entries', ['id' => $journal->id, 'status' => 'posted']);
+
+        $this->put(route('accounting.journal-entries.update', $journal), $this->journalPayload($journal, 'Should fail'))->assertForbidden();
+        $this->delete(route('accounting.journal-entries.destroy', $journal))->assertForbidden();
+        $this->post(route('accounting.journal-entries.post', $journal))->assertForbidden();
+    }
+
+    public function test_unbalanced_or_one_sided_draft_cannot_be_posted(): void
+    {
+        $accountant = User::factory()->create(['role' => 'accountant']);
+        $cash = ChartOfAccount::create(['code' => '1100', 'name' => 'Cash', 'type' => 'asset']);
+        $revenue = ChartOfAccount::create(['code' => '4100', 'name' => 'Revenue', 'type' => 'revenue']);
+
+        foreach ([
+            [['chart_of_account_id' => $cash->id, 'debit' => '100.00', 'credit' => '0.00'], ['chart_of_account_id' => $revenue->id, 'debit' => '0.00', 'credit' => '90.00']],
+            [['chart_of_account_id' => $cash->id, 'debit' => '100.00', 'credit' => '0.00'], ['chart_of_account_id' => $revenue->id, 'debit' => '100.00', 'credit' => '0.00']],
+            [['chart_of_account_id' => $cash->id, 'debit' => '0.00', 'credit' => '100.00'], ['chart_of_account_id' => $revenue->id, 'debit' => '0.00', 'credit' => '100.00']],
+        ] as $lines) {
+            $journal = JournalEntry::create(['journal_number' => 'JV-'.fake()->unique()->numerify('######'), 'transaction_date' => '2026-08-21', 'status' => 'draft', 'created_by' => $accountant->id]);
+            $journal->lines()->createMany($lines);
+            $this->actingAs($accountant)->post(route('accounting.journal-entries.submit', $journal))->assertSessionHasErrors('lines');
+            $this->assertSame('draft', $journal->fresh()->status);
+        }
+    }
+
+    public function test_manager_can_view_but_cannot_edit_delete_or_post(): void
+    {
+        $manager = User::factory()->create(['role' => 'manager']);
+        $journal = $this->createDraft(User::factory()->create(['role' => 'accountant']));
+
+        $this->actingAs($manager)->get(route('accounting.journal-entries.show', $journal))->assertOk();
+        $this->get(route('accounting.journal-entries.edit', $journal))->assertForbidden();
+        $this->put(route('accounting.journal-entries.update', $journal), $this->journalPayload($journal, 'Nope'))->assertForbidden();
+        $this->delete(route('accounting.journal-entries.destroy', $journal))->assertForbidden();
+        $this->post(route('accounting.journal-entries.post', $journal))->assertForbidden();
+    }
+
+    public function test_accountant_can_submit_draft_and_manager_can_approve_or_reject(): void
+    {
+        $accountant = User::factory()->create(['role' => 'accountant']);
+        $manager = User::factory()->create(['role' => 'manager']);
+        $journal = $this->createDraft($accountant);
+
+        $this->actingAs($accountant)->post(route('accounting.journal-entries.submit', $journal))->assertRedirect();
+        $this->assertDatabaseHas('journal_entries', ['id' => $journal->id, 'status' => 'pending']);
+        $this->actingAs($accountant)->get(route('accounting.journal-entries.edit', $journal))->assertForbidden();
+        $this->actingAs($accountant)->delete(route('accounting.journal-entries.destroy', $journal))->assertForbidden();
+        $this->actingAs($accountant)->post(route('accounting.journal-entries.approve', $journal))->assertForbidden();
+
+        $this->actingAs($manager)->post(route('accounting.journal-entries.reject', $journal))->assertRedirect();
+        $this->assertDatabaseHas('journal_entries', ['id' => $journal->id, 'status' => 'draft', 'journal_number' => $journal->journal_number]);
+        $this->actingAs($accountant)->post(route('accounting.journal-entries.submit', $journal));
+        $this->actingAs($manager)->post(route('accounting.journal-entries.approve', $journal))->assertRedirect();
+        $this->assertDatabaseHas('journal_entries', ['id' => $journal->id, 'status' => 'approved']);
+        $this->actingAs($manager)->post(route('accounting.journal-entries.post', $journal))->assertForbidden();
+    }
+
+    public function test_invalid_transition_returns_forbidden(): void
+    {
+        $accountant = User::factory()->create(['role' => 'accountant']);
+        $manager = User::factory()->create(['role' => 'manager']);
+        $journal = $this->createDraft($accountant);
+
+        $this->actingAs($manager)->post(route('accounting.journal-entries.approve', $journal))->assertForbidden();
+        $this->actingAs($accountant)->post(route('accounting.journal-entries.post', $journal))->assertForbidden();
+        $this->actingAs($manager)->post(route('accounting.journal-entries.reject', $journal))->assertForbidden();
+    }
+
+    private function createDraft(User $user): JournalEntry
+    {
+        $cash = ChartOfAccount::create(['code' => '1100'.fake()->unique()->numerify('##'), 'name' => 'Cash '.fake()->unique()->word(), 'type' => 'asset']);
+        $revenue = ChartOfAccount::create(['code' => '4100'.fake()->unique()->numerify('##'), 'name' => 'Revenue '.fake()->unique()->word(), 'type' => 'revenue']);
+        $journal = JournalEntry::create(['journal_number' => 'JV-'.fake()->unique()->numerify('######'), 'transaction_date' => '2026-08-21', 'status' => 'draft', 'created_by' => $user->id]);
+        $journal->lines()->createMany([
+            ['chart_of_account_id' => $cash->id, 'debit' => '100.00', 'credit' => '0.00'],
+            ['chart_of_account_id' => $revenue->id, 'debit' => '0.00', 'credit' => '100.00'],
+        ]);
+        return $journal;
+    }
+
+    private function journalPayload(JournalEntry $journal, string $description): array
+    {
+        return ['transaction_date' => '2026-08-22', 'description' => $description, 'lines' => $journal->lines->map(fn ($line) => ['chart_of_account_id' => $line->chart_of_account_id, 'description' => $line->description, 'debit' => $line->debit, 'credit' => $line->credit])->all()];
     }
 }

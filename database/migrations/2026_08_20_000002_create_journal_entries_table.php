@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('journal_number', 20)->unique();
             $table->date('transaction_date');
             $table->text('description')->nullable();
-            $table->enum('status', ['draft', 'posted'])->default('posted');
+            $table->enum('status', ['draft', 'pending', 'approved', 'posted'])->default('draft');
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->timestamps();
         });

@@ -24,7 +24,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/accounting/journal-entries', [App\Http\Controllers\Accounting\JournalEntryController::class, 'index'])
         ->name('accounting.journal-entries.index');
-
     Route::middleware('role:accountant')->group(function () {
         // Accountant can manage COA
         Route::post('/accounting/chart-of-accounts', [App\Http\Controllers\Accounting\ChartOfAccountController::class, 'store'])
@@ -37,6 +36,23 @@ Route::middleware('auth')->group(function () {
             ->name('accounting.journal-entries.create');
         Route::post('/accounting/journal-entries', [App\Http\Controllers\Accounting\JournalEntryController::class, 'store'])
             ->name('accounting.journal-entries.store');
+        Route::get('/accounting/journal-entries/{journalEntry}/edit', [App\Http\Controllers\Accounting\JournalEntryController::class, 'edit'])
+            ->name('accounting.journal-entries.edit');
+        Route::put('/accounting/journal-entries/{journalEntry}', [App\Http\Controllers\Accounting\JournalEntryController::class, 'update'])
+            ->name('accounting.journal-entries.update');
+        Route::delete('/accounting/journal-entries/{journalEntry}', [App\Http\Controllers\Accounting\JournalEntryController::class, 'destroy'])
+            ->name('accounting.journal-entries.destroy');
+        Route::post('/accounting/journal-entries/{journalEntry}/post', [App\Http\Controllers\Accounting\JournalEntryController::class, 'post'])
+            ->name('accounting.journal-entries.post');
+        Route::post('/accounting/journal-entries/{journalEntry}/submit', [App\Http\Controllers\Accounting\JournalEntryController::class, 'submit'])
+            ->name('accounting.journal-entries.submit');
+    });
+
+    Route::middleware('role:manager')->group(function () {
+        Route::post('/accounting/journal-entries/{journalEntry}/approve', [App\Http\Controllers\Accounting\JournalEntryController::class, 'approve'])
+            ->name('accounting.journal-entries.approve');
+        Route::post('/accounting/journal-entries/{journalEntry}/reject', [App\Http\Controllers\Accounting\JournalEntryController::class, 'reject'])
+            ->name('accounting.journal-entries.reject');
     });
 
     Route::get('/accounting/journal-entries/{journalEntry}', [App\Http\Controllers\Accounting\JournalEntryController::class, 'show'])
