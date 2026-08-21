@@ -10,8 +10,8 @@ const primaryNavigation = [
 
 const upcomingNavigation = [
     'Journal Upload',
-    'General Ledger',
-    'Trial Balance',
+    { label: 'General Ledger', href: '/accounting/general-ledger' },
+    { label: 'Trial Balance', href: '/accounting/trial-balance' },
     'Balance Sheet',
     'Income Statement',
     'Financial Position',
@@ -48,7 +48,7 @@ export default function AuthenticatedLayout({ children }: PropsWithChildren) {
                         <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7f9c8e]">Accounting & reports</p>
                         <div className="space-y-1">
                             {upcomingNavigation.map((item) => (
-                                <span key={item} className="block cursor-default px-3 py-2 text-sm text-[#759388]">{item}</span>
+                                typeof item === 'string' ? <span key={item} className="block cursor-default px-3 py-2 text-sm text-[#759388]">{item}</span> : <Link key={item.href} href={item.href} className="block rounded-lg px-3 py-2 text-sm text-[#dce8df] transition hover:bg-[#285348]">{item.label}</Link>
                             ))}
                         </div>
                     </div>

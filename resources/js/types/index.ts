@@ -55,3 +55,24 @@ export interface Paginated<T> {
     last_page: number;
     total: number;
 }
+
+export interface ReportAccount {
+    id: number;
+    code: string;
+    name: string;
+    type: ChartOfAccount['type'];
+}
+
+export interface LedgerTransaction {
+    date: string;
+    journal_number: string;
+    description: string | null;
+    debit: number;
+    credit: number;
+    running_balance: number;
+}
+
+export interface TrialBalanceAccount extends ReportAccount {
+    debit: number;
+    credit: number;
+}

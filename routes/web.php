@@ -24,6 +24,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/accounting/journal-entries', [App\Http\Controllers\Accounting\JournalEntryController::class, 'index'])
         ->name('accounting.journal-entries.index');
+    Route::get('/accounting/general-ledger', [App\Http\Controllers\Accounting\ReportController::class, 'generalLedger'])
+        ->name('accounting.general-ledger');
+    Route::get('/accounting/trial-balance', [App\Http\Controllers\Accounting\ReportController::class, 'trialBalance'])
+        ->name('accounting.trial-balance');
     Route::middleware('role:accountant')->group(function () {
         // Accountant can manage COA
         Route::post('/accounting/chart-of-accounts', [App\Http\Controllers\Accounting\ChartOfAccountController::class, 'store'])
