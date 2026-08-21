@@ -76,3 +76,7 @@ export interface TrialBalanceAccount extends ReportAccount {
     debit: number;
     credit: number;
 }
+
+export interface StatementAccount extends ReportAccount {
+    balance: number;
+}

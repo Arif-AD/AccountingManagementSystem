@@ -12,8 +12,8 @@ const upcomingNavigation = [
     'Journal Upload',
     { label: 'General Ledger', href: '/accounting/general-ledger' },
     { label: 'Trial Balance', href: '/accounting/trial-balance' },
-    'Balance Sheet',
-    'Income Statement',
+    { label: 'Balance Sheet', href: '/accounting/balance-sheet' },
+    { label: 'Income Statement', href: '/accounting/income-statement' },
     'Financial Position',
 ];
 
