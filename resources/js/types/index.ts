@@ -80,3 +80,10 @@ export interface TrialBalanceAccount extends ReportAccount {
 export interface StatementAccount extends ReportAccount {
     balance: number;
 }
+
+export interface JournalUploadResponse {
+    success: boolean;
+    message: string;
+    journal?: { id: number; journal_number: string; status: string };
+    errors?: Record<string, string>;
+}

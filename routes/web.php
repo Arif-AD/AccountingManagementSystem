@@ -32,6 +32,8 @@ Route::middleware('auth')->group(function () {
         ->name('accounting.income-statement');
     Route::get('/accounting/balance-sheet', [App\Http\Controllers\Accounting\ReportController::class, 'balanceSheet'])
         ->name('accounting.balance-sheet');
+    Route::get('/accounting/financial-position', [App\Http\Controllers\Accounting\ReportController::class, 'financialPosition'])
+        ->name('accounting.financial-position');
     Route::middleware('role:accountant')->group(function () {
         // Accountant can manage COA
         Route::post('/accounting/chart-of-accounts', [App\Http\Controllers\Accounting\ChartOfAccountController::class, 'store'])
@@ -54,6 +56,10 @@ Route::middleware('auth')->group(function () {
             ->name('accounting.journal-entries.post');
         Route::post('/accounting/journal-entries/{journalEntry}/submit', [App\Http\Controllers\Accounting\JournalEntryController::class, 'submit'])
             ->name('accounting.journal-entries.submit');
+        Route::get('/accounting/journal-upload', [App\Http\Controllers\Accounting\JournalUploadController::class, 'create'])
+            ->name('accounting.journal-upload.create');
+        Route::post('/accounting/journal-upload', [App\Http\Controllers\Accounting\JournalUploadController::class, 'store'])
+            ->name('accounting.journal-upload.store');
     });
 
     Route::middleware('role:manager')->group(function () {

@@ -6,15 +6,15 @@ const primaryNavigation = [
     { label: 'Dashboard', href: '/dashboard', active: true },
     { label: 'Chart of Accounts', href: '/accounting/chart-of-accounts', active: true },
     { label: 'Journal Entries', href: '/accounting/journal-entries', active: true },
+    { label: 'Upload Jurnal', href: '/accounting/journal-upload', active: true, role: 'accountant' },
 ];
 
 const upcomingNavigation = [
-    'Journal Upload',
     { label: 'General Ledger', href: '/accounting/general-ledger' },
     { label: 'Trial Balance', href: '/accounting/trial-balance' },
-    { label: 'Balance Sheet', href: '/accounting/balance-sheet' },
     { label: 'Income Statement', href: '/accounting/income-statement' },
-    'Financial Position',
+    { label: 'Balance Sheet', href: '/accounting/balance-sheet' },
+    { label: 'Financial Position', href: '/accounting/financial-position' },
 ];
 
 export default function AuthenticatedLayout({ children }: PropsWithChildren) {
@@ -37,10 +37,12 @@ export default function AuthenticatedLayout({ children }: PropsWithChildren) {
                     <div>
                         <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7f9c8e]">Workspace</p>
                         <div className="space-y-1">
-                            {primaryNavigation.map((item) => (
-                                <Link key={item.href} href={item.href} className="block rounded-lg px-3 py-2.5 text-sm text-[#dce8df] transition hover:bg-[#285348]">
-                                    {item.label}
-                                </Link>
+                            {primaryNavigation.map((item: any) => (
+                                (!item.role || user?.role === item.role) && (
+                                    <Link key={item.href} href={item.href} className="block rounded-lg px-3 py-2.5 text-sm text-[#dce8df] transition hover:bg-[#285348]">
+                                        {item.label}
+                                    </Link>
+                                )
                             ))}
                         </div>
                     </div>
