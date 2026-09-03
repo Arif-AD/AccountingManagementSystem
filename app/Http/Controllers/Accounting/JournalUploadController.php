@@ -8,6 +8,7 @@ use App\Models\JournalEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,122 +22,70 @@ class JournalUploadController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $file = $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt'],
-        ])['file'];
+        $hasPendingUpload = JournalEntry::query()
+            ->where('created_by', auth()->id())
+            ->where('source', 'csv')
+            ->where('status', JournalEntry::STATUS_PENDING)
+            ->exists();
 
-        $rows = array_map('str_getcsv', file($file->getRealPath()));
-        $headers = array_shift($rows);
-        if (!in_array('date', $headers) || !in_array('description', $headers) || !in_array('account_code', $headers) || !in_array('debit', $headers) || !in_array('credit', $headers)) {
-            throw ValidationException::withMessages(['file' => 'CSV must contain columns: date, description, account_code, debit, credit']);
+        if ($hasPendingUpload) {
+            throw ValidationException::withMessages([
+                'file' => 'Masih ada file unggahan yang berstatus pending. Tunggu persetujuan manager sebelum mengunggah file baru.',
+            ]);
         }
 
-        $lines = [];
-        $accountCodesInFile = [];
-        $totalDebit = '0.00';
-        $totalCredit = '0.00';
-        $hasDebit = false;
-        $hasCredit = false;
+        $uploadedFile = $request->file('file');
+        if ($uploadedFile && $uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            $message = match ($uploadedFile->getError()) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'File terlalu besar. Batas upload server saat ini 2 MB.',
+                UPLOAD_ERR_PARTIAL => 'File hanya terunggah sebagian. Silakan coba lagi.',
+                UPLOAD_ERR_NO_FILE => 'Silakan pilih file CSV atau XLSX terlebih dahulu.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Folder temporary upload PHP tidak tersedia. Periksa konfigurasi upload_tmp_dir pada server.',
+                UPLOAD_ERR_CANT_WRITE => 'PHP tidak dapat menulis file upload ke disk. Periksa izin folder temporary server.',
+                UPLOAD_ERR_EXTENSION => 'Upload dihentikan oleh ekstensi PHP pada server.',
+                default => 'File gagal diunggah oleh server (kode error '.$uploadedFile->getError().').',
+            };
 
-        foreach ($rows as $rowIndex => $row) {
-            if (count($row) < 5 || (empty($row[0]) && empty($row[1]) && empty($row[2]) && empty($row[3]) && empty($row[4]))) {
-                continue;
-            }
-
-            $data = array_combine($headers, $row);
-            $date = trim($data['date'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $accountCode = trim($data['account_code'] ?? '');
-            $debit = trim($data['debit'] ?? '0');
-            $credit = trim($data['credit'] ?? '0');
-
-            if (!$date || !$accountCode) {
-                throw ValidationException::withMessages(['file' => "Row " . ($rowIndex + 2) . ": date and account_code are required"]);
-            }
-
-            if (!strtotime($date)) {
-                throw ValidationException::withMessages(['file' => "Row " . ($rowIndex + 2) . ": invalid date format"]);
-            }
-
-            if (!is_numeric($debit) || !is_numeric($credit) || (float) $debit < 0 || (float) $credit < 0) {
-                throw ValidationException::withMessages(['file' => "Row " . ($rowIndex + 2) . ": debit and credit must be non-negative numbers"]);
-            }
-
-            if ((float) $debit > 0 && (float) $credit > 0) {
-                throw ValidationException::withMessages(['file' => "Row " . ($rowIndex + 2) . ": line cannot have both debit and credit"]);
-            }
-
-            if ((float) $debit === 0.0 && (float) $credit === 0.0) {
-                throw ValidationException::withMessages(['file' => "Row " . ($rowIndex + 2) . ": line must have debit or credit"]);
-            }
-
-            $debitFormatted = number_format((float) $debit, 2, '.', '');
-            $creditFormatted = number_format((float) $credit, 2, '.', '');
-            $totalDebit = bcadd($totalDebit, $debitFormatted, 2);
-            $totalCredit = bcadd($totalCredit, $creditFormatted, 2);
-            $hasDebit = $hasDebit || (float) $debitFormatted > 0;
-            $hasCredit = $hasCredit || (float) $creditFormatted > 0;
-
-            $lines[] = [
-                'date' => $date,
-                'description' => $description ?: null,
-                'account_code' => $accountCode,
-                'debit' => $debitFormatted,
-                'credit' => $creditFormatted,
-            ];
-
-            $accountCodesInFile[] = $accountCode;
+            throw ValidationException::withMessages(['file' => $message]);
         }
 
-        if (count($lines) < 2) {
-            throw ValidationException::withMessages(['file' => 'CSV must contain at least 2 journal lines']);
+        $file = $request->validate(['file' => ['required', 'file', 'max:2048']])['file'];
+        if ($file->getSize() === 0) {
+            throw ValidationException::withMessages([
+                'file' => 'File yang dipilih kosong atau tidak berhasil dibaca oleh server.',
+            ]);
         }
 
-        if (!$hasDebit || !$hasCredit || bccomp($totalDebit, $totalCredit, 2) !== 0) {
-            throw ValidationException::withMessages(['file' => 'Journal must have debit and credit totals that are equal']);
+        $extension = strtolower($file->getClientOriginalExtension());
+        if (! in_array($extension, ['csv', 'xlsx', 'xls'], true)) {
+            throw ValidationException::withMessages([
+                'file' => 'Format file harus CSV, XLSX, atau XLS.',
+            ]);
         }
 
-        $accounts = ChartOfAccount::query()
-            ->whereIn('code', array_unique($accountCodesInFile))
-            ->where('is_active', true)
-            ->get(['id', 'code']);
-
-        $accountMap = $accounts->keyBy('code');
-
-        foreach ($accountCodesInFile as $code) {
-            if (!isset($accountMap[$code])) {
-                throw ValidationException::withMessages(['file' => "Account code '{$code}' does not exist or is inactive"]);
-            }
+        $path = Storage::disk('local')->putFile('journal-uploads', $file);
+        if ($path === false) {
+            throw ValidationException::withMessages([
+                'file' => 'File tidak dapat disimpan di penyimpanan lokal. Pastikan folder storage/app/private dapat ditulis.',
+            ]);
         }
 
-        $journalEntry = DB::transaction(function () use ($lines, $accountMap) {
-            $lastNumber = JournalEntry::query()
-                ->lockForUpdate()
-                ->latest('id')
-                ->value('journal_number');
-            $nextNumber = $lastNumber ? ((int) substr($lastNumber, 3)) + 1 : 1;
+        $journal = DB::transaction(function () use ($file, $path) {
+            $last = JournalEntry::lockForUpdate()->latest('id')->value('journal_number');
+            $number = $last ? ((int) substr($last, 3)) + 1 : 1;
 
-            $journal = JournalEntry::create([
-                'journal_number' => 'JV-' . str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT),
-                'transaction_date' => $lines[0]['date'],
-                'description' => 'Imported from CSV',
-                'status' => JournalEntry::STATUS_DRAFT,
+            return JournalEntry::create([
+                'journal_number' => 'JV-'.str_pad((string) $number, 6, '0', STR_PAD_LEFT),
+                'transaction_date' => now()->toDateString(),
+                'description' => 'Upload file',
+                'source' => 'csv',
+                'original_file_name' => $file->getClientOriginalName(),
+                'file_path' => $path,
+                'status' => JournalEntry::STATUS_PENDING,
                 'created_by' => auth()->id(),
             ]);
-
-            foreach ($lines as $line) {
-                $journal->lines()->create([
-                    'chart_of_account_id' => $accountMap[$line['account_code']]->id,
-                    'description' => $line['description'],
-                    'debit' => $line['debit'],
-                    'credit' => $line['credit'],
-                ]);
-            }
-
-            return $journal;
         });
 
-        return redirect()->route('accounting.journal-entries.show', $journalEntry)
-            ->with('success', 'Journal imported successfully as draft. Please review and submit for approval.');
+        return redirect()->route('accounting.journal-entries.show', $journal);
     }
 }

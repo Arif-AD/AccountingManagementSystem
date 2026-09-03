@@ -6,6 +6,7 @@ use App\Models\ChartOfAccount;
 use App\Models\JournalEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class JournalEntryTest extends TestCase
@@ -37,6 +38,57 @@ class JournalEntryTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Accounting/JournalEntries/Create')
                 ->has('accounts'));
+    }
+
+    public function test_accountant_can_upload_csv_with_excel_mime_type(): void
+    {
+        $user = User::factory()->create(['role' => 'accountant']);
+        $file = UploadedFile::fake()->create('journal.csv', 10, 'application/vnd.ms-excel');
+
+        $this->actingAs($user)
+            ->post('/accounting/journal-entries/upload', ['file' => $file])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('journal_entries', [
+            'status' => 'pending',
+            'original_file_name' => 'journal.csv',
+        ]);
+    }
+
+    public function test_accountant_can_upload_supported_spreadsheet_extensions(): void
+    {
+        foreach (['journal.csv', 'journal.xlsx', 'journal.xls'] as $fileName) {
+            $this->actingAs(User::factory()->create(['role' => 'accountant']))
+                ->post('/accounting/journal-entries/upload', [
+                    'file' => UploadedFile::fake()->create($fileName, 10),
+                ])
+                ->assertRedirect();
+        }
+
+        $this->assertDatabaseCount('journal_entries', 3);
+    }
+
+    public function test_accountant_cannot_upload_when_they_have_a_pending_upload(): void
+    {
+        $user = User::factory()->create(['role' => 'accountant']);
+        JournalEntry::create([
+            'journal_number' => 'JV-000001',
+            'transaction_date' => '2026-09-04',
+            'description' => 'Pending upload',
+            'source' => 'csv',
+            'original_file_name' => 'existing.csv',
+            'file_path' => 'journal-uploads/existing.csv',
+            'status' => JournalEntry::STATUS_PENDING,
+            'created_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)
+            ->post('/accounting/journal-entries/upload', [
+                'file' => UploadedFile::fake()->create('another.csv', 10),
+            ])
+            ->assertSessionHasErrors('file');
+
+        $this->assertDatabaseCount('journal_entries', 1);
     }
 
     public function test_accountant_can_create_balanced_journal_with_generated_number(): void

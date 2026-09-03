@@ -56,10 +56,10 @@ Route::middleware('auth')->group(function () {
             ->name('accounting.journal-entries.post');
         Route::post('/accounting/journal-entries/{journalEntry}/submit', [App\Http\Controllers\Accounting\JournalEntryController::class, 'submit'])
             ->name('accounting.journal-entries.submit');
-        Route::get('/accounting/journal-upload', [App\Http\Controllers\Accounting\JournalUploadController::class, 'create'])
-            ->name('accounting.journal-upload.create');
-        Route::post('/accounting/journal-upload', [App\Http\Controllers\Accounting\JournalUploadController::class, 'store'])
-            ->name('accounting.journal-upload.store');
+        Route::get('/accounting/journal-entries/upload', [App\Http\Controllers\Accounting\JournalUploadController::class, 'create'])
+            ->name('accounting.journal-entries.upload');
+        Route::post('/accounting/journal-entries/upload', [App\Http\Controllers\Accounting\JournalUploadController::class, 'store'])
+            ->name('accounting.journal-entries.upload.store');
     });
 
     Route::middleware('role:manager')->group(function () {
@@ -71,4 +71,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/accounting/journal-entries/{journalEntry}', [App\Http\Controllers\Accounting\JournalEntryController::class, 'show'])
         ->name('accounting.journal-entries.show');
+    Route::get('/accounting/journal-entries/{journalEntry}/file', [App\Http\Controllers\Accounting\JournalEntryController::class, 'downloadFile'])
+        ->name('accounting.journal-entries.file');
 });

@@ -41,6 +41,9 @@ export interface JournalEntry {
     transaction_date: string;
     description: string | null;
     status: 'draft' | 'pending' | 'approved' | 'posted';
+    source: 'manual' | 'csv';
+    original_file_name?: string | null;
+    file_path?: string | null;
     created_by: number;
     created_at: string;
     creator: Pick<User, 'id' | 'name'>;
@@ -79,11 +82,4 @@ export interface TrialBalanceAccount extends ReportAccount {
 
 export interface StatementAccount extends ReportAccount {
     balance: number;
-}
-
-export interface JournalUploadResponse {
-    success: boolean;
-    message: string;
-    journal?: { id: number; journal_number: string; status: string };
-    errors?: Record<string, string>;
 }

@@ -174,23 +174,15 @@ class ReportController extends Controller
         $assets = $accounts->where('type', 'asset')->values();
         $liabilities = $accounts->where('type', 'liability')->values();
         $equity = $accounts->where('type', 'equity')->values();
-        $incomeAccounts = $this->postedAccountBalances($filters['start_date'], $filters['end_date'], ['revenue', 'expense']);
-        $netIncome = $incomeAccounts->where('type', 'revenue')->sum('balance') - $incomeAccounts->where('type', 'expense')->sum('balance');
+        $income = $this->postedAccountBalances($filters['start_date'], $filters['end_date'], ['revenue', 'expense']);
+        $netIncome = $income->where('type', 'revenue')->sum('balance') - $income->where('type', 'expense')->sum('balance');
         $totalAssets = $assets->sum('balance');
         $totalLiabilities = $liabilities->sum('balance');
         $totalEquity = $equity->sum('balance') + $netIncome;
 
-        return Inertia::render('Accounting/Reports/FinancialPosition', [
-            'assets' => $assets,
-            'liabilities' => $liabilities,
-            'equity' => $equity,
-            'netIncome' => $netIncome,
-            'totalAssets' => $totalAssets,
-            'totalLiabilities' => $totalLiabilities,
-            'totalEquity' => $totalEquity,
-            'balanced' => abs($totalAssets - ($totalLiabilities + $totalEquity)) < 0.005,
-            'filters' => $filters,
-        ]);
+        return Inertia::render('Accounting/Reports/FinancialPosition', compact(
+            'assets', 'liabilities', 'equity', 'netIncome', 'totalAssets', 'totalLiabilities', 'totalEquity', 'filters'
+        ) + ['balanced' => abs($totalAssets - ($totalLiabilities + $totalEquity)) < 0.005]);
     }
 
     private function dateFilters(Request $request): array

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class JournalEntryController extends Controller
 {
@@ -61,7 +62,13 @@ class JournalEntryController extends Controller
             'lines' => ['required', 'array'],
         ]);
 
-        $validated['lines'] = $this->validatedLines($request);
+        $validated['lines'] = self::validateLines($request->validate([
+            'lines' => ['required', 'array', 'min:2'],
+            'lines.*.chart_of_account_id' => ['required', 'integer', 'exists:chart_of_accounts,id'],
+            'lines.*.description' => ['nullable', 'string', 'max:1000'],
+            'lines.*.debit' => ['required', 'numeric', 'gte:0'],
+            'lines.*.credit' => ['required', 'numeric', 'gte:0'],
+        ])['lines']);
 
         $journalEntry = DB::transaction(function () use ($validated) {
             $lastNumber = JournalEntry::query()
@@ -74,6 +81,7 @@ class JournalEntryController extends Controller
                 'journal_number' => 'JV-'.str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT),
                 'transaction_date' => $validated['transaction_date'],
                 'description' => $validated['description'] ?? null,
+                'source' => 'manual',
                 'status' => JournalEntry::STATUS_DRAFT,
                 'created_by' => auth()->id(),
             ]);
@@ -104,7 +112,13 @@ class JournalEntryController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'lines' => ['required', 'array'],
         ]);
-        $validated['lines'] = $this->validatedLines($request);
+        $validated['lines'] = self::validateLines($request->validate([
+            'lines' => ['required', 'array', 'min:2'],
+            'lines.*.chart_of_account_id' => ['required', 'integer', 'exists:chart_of_accounts,id'],
+            'lines.*.description' => ['nullable', 'string', 'max:1000'],
+            'lines.*.debit' => ['required', 'numeric', 'gte:0'],
+            'lines.*.credit' => ['required', 'numeric', 'gte:0'],
+        ])['lines']);
 
         DB::transaction(function () use ($journalEntry, $validated) {
             $journalEntry->update([
@@ -149,7 +163,6 @@ class JournalEntryController extends Controller
     public function approve(JournalEntry $journalEntry): RedirectResponse
     {
         abort_unless($journalEntry->isPending(), 403, 'Only pending journals can be approved.');
-        $this->validatedLinesForEntry($journalEntry);
 
         DB::transaction(fn () => $journalEntry->update(['status' => JournalEntry::STATUS_APPROVED]));
 
@@ -175,26 +188,25 @@ class JournalEntryController extends Controller
         ]);
     }
 
+    public function downloadFile(JournalEntry $journalEntry)
+    {
+        abort_unless($journalEntry->source === 'csv' && $journalEntry->file_path, 404);
+
+        return response()->download(storage_path('app/private/'.$journalEntry->file_path), $journalEntry->original_file_name);
+    }
+
     private function ensureDraft(JournalEntry $journalEntry): void
     {
         abort_unless($journalEntry->isDraft(), 403, 'Posted journals are immutable.');
     }
 
-    private function validatedLines(Request $request): array
+    public static function validateLines(array $lines): array
     {
-        $validated = $request->validate([
-            'lines' => ['required', 'array', 'min:2'],
-            'lines.*.chart_of_account_id' => ['required', 'integer', 'exists:chart_of_accounts,id'],
-            'lines.*.description' => ['nullable', 'string', 'max:1000'],
-            'lines.*.debit' => ['required', 'numeric', 'gte:0'],
-            'lines.*.credit' => ['required', 'numeric', 'gte:0'],
-        ]);
-
         $totalDebit = '0.00';
         $totalCredit = '0.00';
         $hasDebit = false;
         $hasCredit = false;
-        foreach ($validated['lines'] as $index => $line) {
+        foreach ($lines as $index => $line) {
             $debit = number_format((float) $line['debit'], 2, '.', '');
             $credit = number_format((float) $line['credit'], 2, '.', '');
             if (bccomp($debit, '0.00', 2) > 0 && bccomp($credit, '0.00', 2) > 0) {
@@ -211,16 +223,336 @@ class JournalEntryController extends Controller
         if (! $hasDebit || ! $hasCredit || bccomp($totalDebit, $totalCredit, 2) !== 0) {
             throw ValidationException::withMessages(['lines' => 'The journal must have debit and credit totals that are equal.']);
         }
-        $accountIds = collect($validated['lines'])->pluck('chart_of_account_id')->unique();
+        $accountIds = collect($lines)->pluck('chart_of_account_id')->unique();
         if (ChartOfAccount::whereIn('id', $accountIds)->where('is_active', true)->count() !== $accountIds->count()) {
             throw ValidationException::withMessages(['lines' => 'Every journal line must reference an active Chart of Account.']);
         }
 
-        return $validated['lines'];
+        return $lines;
     }
 
     private function validatedLinesForEntry(JournalEntry $journalEntry): void
     {
-        $this->validatedLines(new Request(['lines' => $journalEntry->lines->toArray()]));
+        self::validateLines($journalEntry->lines->toArray());
+    }
+
+    private function parseCsvLinesForApproval(JournalEntry $journalEntry): void
+    {
+        if (! $journalEntry->file_path) {
+            throw ValidationException::withMessages(['file' => 'Attachment file tidak ditemukan.']);
+        }
+
+        $path = storage_path('app/private/'.$journalEntry->file_path);
+        if (! is_file($path) || filesize($path) === 0) {
+            throw ValidationException::withMessages(['file' => 'File unggahan kosong atau tidak dapat dibaca. Silakan unggah ulang file tersebut.']);
+        }
+
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        if ($extension === 'csv') {
+            $rows = $this->readCsvRows($path);
+        } elseif ($extension === 'xlsx') {
+            $rows = $this->readXlsxRows($path);
+        } elseif ($extension === 'xls') {
+            $rows = $this->readSpreadsheetRows($path);
+        } else {
+            throw ValidationException::withMessages(['file' => 'Format file harus CSV, XLSX, atau XLS.']);
+        }
+
+        if ($rows === []) {
+            throw ValidationException::withMessages(['file' => 'File tidak berisi data jurnal yang bisa diproses.']);
+        }
+
+        $lines = [];
+        foreach ($rows as $row) {
+            $accountModel = ChartOfAccount::query()
+                ->where('is_active', true)
+                ->where(function ($query) use ($row) {
+                    $query->where('code', trim((string) $row['account']))
+                        ->orWhere('name', trim((string) $row['account']));
+                })
+                ->first();
+
+            if (! $accountModel) {
+                throw ValidationException::withMessages(['file' => "Akun '{$row['account']}' tidak ditemukan atau tidak aktif."]);
+            }
+
+            $debitValue = (float) $row['debit'];
+            $creditValue = (float) $row['credit'];
+            if (! is_numeric($row['debit']) || ! is_numeric($row['credit']) || $debitValue < 0 || $creditValue < 0) {
+                throw ValidationException::withMessages(['file' => "Kolom debit/kredit untuk akun '{$row['account']}' harus angka non-negatif."]);
+            }
+
+            $lines[] = [
+                'chart_of_account_id' => $accountModel->id,
+                'description' => $row['description'],
+                'debit' => number_format($debitValue, 2, '.', ''),
+                'credit' => number_format($creditValue, 2, '.', ''),
+            ];
+        }
+
+        $journalEntry->update([
+            'transaction_date' => $rows[0]['date'],
+            'description' => $rows[0]['description'] ?: 'Imported from spreadsheet',
+        ]);
+        $journalEntry->lines()->delete();
+        $journalEntry->lines()->createMany(self::validateLines($lines));
+    }
+
+    private function readCsvRows(string $path): array
+    {
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            throw ValidationException::withMessages(['file' => 'File CSV tidak bisa dibuka.']);
+        }
+
+        $headerRow = fgetcsv($handle);
+        if ($headerRow === false) {
+            fclose($handle);
+            throw ValidationException::withMessages(['file' => 'CSV tidak berisi header kolom.']);
+        }
+
+        $normalizedHeaders = array_map(function (string $header): string {
+            $value = strtolower(trim($header));
+
+            return preg_replace('/[^a-z0-9]+/u', '_', $value) ?? $value;
+        }, $headerRow);
+
+        $map = $this->mapRequiredColumns($normalizedHeaders);
+        if ($map['date'] === null || $map['account'] === null || $map['debit'] === null || $map['credit'] === null) {
+            fclose($handle);
+            throw ValidationException::withMessages(['file' => 'CSV harus memiliki kolom tanggal, akun/kode akun, debit, dan kredit.']);
+        }
+
+        $rows = [];
+        while (($row = fgetcsv($handle)) !== false) {
+            if ($row === [null] || array_filter($row, fn ($cell) => trim((string) $cell) !== '') === []) {
+                continue;
+            }
+
+            $date = trim((string) ($row[$map['date']] ?? ''));
+            $account = trim((string) ($row[$map['account']] ?? ''));
+            $debit = trim((string) ($row[$map['debit']] ?? ''));
+            $credit = trim((string) ($row[$map['credit']] ?? ''));
+
+            if ($date === '' || $account === '') {
+                continue;
+            }
+
+            $rows[] = [
+                'date' => $date,
+                'account' => $account,
+                'description' => trim((string) ($row[$map['description'] ?? 0] ?? '')) ?: null,
+                'debit' => $debit,
+                'credit' => $credit,
+            ];
+        }
+
+        fclose($handle);
+
+        return $rows;
+    }
+
+    private function readXlsxRows(string $path): array
+    {
+        $zip = new \ZipArchive();
+        $opened = $zip->open($path);
+        if ($opened !== true) {
+            throw ValidationException::withMessages(['file' => 'File Excel (.xlsx) tidak bisa dibuka.']);
+        }
+
+        $sharedStrings = [];
+        $sharedStringXml = $zip->getFromName('xl/sharedStrings.xml');
+        if ($sharedStringXml !== false) {
+            $sharedXml = new \SimpleXMLElement($sharedStringXml);
+            foreach ($sharedXml->si as $si) {
+                $text = '';
+                foreach ($si->t as $token) {
+                    $text .= (string) $token;
+                }
+                $sharedStrings[] = $text;
+            }
+        }
+
+        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+
+        if ($sheetXml === false) {
+            throw ValidationException::withMessages(['file' => 'Tidak ada sheet Excel yang bisa dibaca.']);
+        }
+
+        $dom = new \DOMDocument();
+        $dom->loadXML($sheetXml);
+
+        $rows = [];
+        foreach ($dom->getElementsByTagName('row') as $rowNode) {
+            $values = [];
+            foreach ($rowNode->childNodes as $cellNode) {
+                if ($cellNode->nodeType !== XML_ELEMENT_NODE) {
+                    continue;
+                }
+
+                $reference = $cellNode->getAttribute('r');
+                $column = 'A';
+                if ($reference !== '') {
+                    preg_match('/([A-Z]+)/', $reference, $matches);
+                    $column = $matches[1] ?? 'A';
+                }
+
+                $columnIndex = $this->columnToIndex($column);
+                $cellType = $cellNode->getAttribute('t');
+                $cellValue = '';
+
+                foreach ($cellNode->childNodes as $node) {
+                    if ($node->nodeType === XML_ELEMENT_NODE && $node->nodeName === 'v') {
+                        $cellValue = trim((string) $node->textContent);
+                    }
+                    if ($node->nodeType === XML_ELEMENT_NODE && $node->nodeName === 'is') {
+                        $cellValue = trim((string) $node->textContent);
+                    }
+                }
+
+                if ($cellType === 's' && $cellValue !== '') {
+                    $cellValue = $sharedStrings[(int) $cellValue] ?? $cellValue;
+                }
+
+                $values[$columnIndex] = $cellValue;
+            }
+
+            if ($values === []) {
+                continue;
+            }
+
+            ksort($values);
+            $rows[] = array_values($values);
+        }
+
+        if ($rows === []) {
+            return [];
+        }
+
+        $headerRow = array_map(function ($value) {
+            return strtolower(trim((string) $value));
+        }, $rows[0]);
+
+        $normalizedHeaders = array_map(function ($header) {
+            return preg_replace('/[^a-z0-9]+/u', '_', $header) ?? $header;
+        }, $headerRow);
+
+        $map = $this->mapRequiredColumns($normalizedHeaders);
+        if ($map['date'] === null || $map['account'] === null || $map['debit'] === null || $map['credit'] === null) {
+            throw ValidationException::withMessages(['file' => 'File Excel harus memiliki kolom tanggal, akun/kode akun, debit, dan kredit.']);
+        }
+
+        $result = [];
+        for ($i = 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+            if ($row === [null] || array_filter($row, fn ($cell) => trim((string) $cell) !== '') === []) {
+                continue;
+            }
+
+            $date = trim((string) ($row[$map['date']] ?? ''));
+            $account = trim((string) ($row[$map['account']] ?? ''));
+            $debit = trim((string) ($row[$map['debit']] ?? ''));
+            $credit = trim((string) ($row[$map['credit']] ?? ''));
+
+            if ($date === '' || $account === '') {
+                continue;
+            }
+
+            $result[] = [
+                'date' => $date,
+                'account' => $account,
+                'description' => trim((string) ($row[$map['description'] ?? 0] ?? '')) ?: null,
+                'debit' => $debit,
+                'credit' => $credit,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function readSpreadsheetRows(string $path): array
+    {
+        try {
+            $sheet = IOFactory::load($path)->getActiveSheet();
+            $rows = $sheet->toArray(null, true, true, false);
+        } catch (\Throwable) {
+            throw ValidationException::withMessages(['file' => 'File Excel (.xls) tidak bisa dibuka.']);
+        }
+
+        if ($rows === []) {
+            return [];
+        }
+
+        $normalizedHeaders = array_map(function ($header) {
+            $value = strtolower(trim((string) $header));
+
+            return preg_replace('/[^a-z0-9]+/u', '_', $value) ?? $value;
+        }, $rows[0]);
+        $map = $this->mapRequiredColumns($normalizedHeaders);
+
+        if ($map['date'] === null || $map['account'] === null || $map['debit'] === null || $map['credit'] === null) {
+            throw ValidationException::withMessages(['file' => 'File Excel harus memiliki kolom tanggal, akun/kode akun, debit, dan kredit.']);
+        }
+
+        $result = [];
+        foreach (array_slice($rows, 1) as $row) {
+            $date = trim((string) ($row[$map['date']] ?? ''));
+            $account = trim((string) ($row[$map['account']] ?? ''));
+            if ($date === '' || $account === '') {
+                continue;
+            }
+
+            $result[] = [
+                'date' => $date,
+                'account' => $account,
+                'description' => trim((string) ($row[$map['description'] ?? 0] ?? '')) ?: null,
+                'debit' => trim((string) ($row[$map['debit']] ?? '')),
+                'credit' => trim((string) ($row[$map['credit']] ?? '')),
+            ];
+        }
+
+        return $result;
+    }
+
+    private function mapRequiredColumns(array $headers): array
+    {
+        $result = ['date' => null, 'account' => null, 'debit' => null, 'credit' => null, 'description' => null];
+
+        foreach ($headers as $index => $header) {
+            if ($result['date'] === null && in_array($header, ['date', 'tanggal', 'transaction_date', 'trx_date'], true)) {
+                $result['date'] = $index;
+            }
+            if ($result['account'] === null && in_array($header, ['account', 'akun', 'account_code', 'kode_akun', 'kode', 'code', 'account_name', 'nama_akun', 'name'], true)) {
+                $result['account'] = $index;
+            }
+            if ($result['debit'] === null && in_array($header, ['debit', 'debet'], true)) {
+                $result['debit'] = $index;
+            }
+            if ($result['credit'] === null && in_array($header, ['credit', 'kredit'], true)) {
+                $result['credit'] = $index;
+            }
+            if ($result['description'] === null && in_array($header, ['description', 'deskripsi', 'memo', 'keterangan'], true)) {
+                $result['description'] = $index;
+            }
+        }
+
+        return $result;
+    }
+
+    private function columnToIndex(string $column): int
+    {
+        $value = 0;
+        $letters = preg_replace('/[^A-Z]/', '', strtoupper($column));
+        if ($letters === '') {
+            return 0;
+        }
+
+        foreach (str_split($letters) as $char) {
+            $value = ($value * 26) + (ord($char) - 64);
+        }
+
+        return $value - 1;
     }
 }

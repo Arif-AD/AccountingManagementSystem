@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['journal_number', 'transaction_date', 'description', 'status', 'created_by'])]
+#[Fillable(['journal_number', 'transaction_date', 'description', 'source', 'original_file_name', 'file_path', 'status', 'created_by'])]
 class JournalEntry extends Model
 {
     public const STATUS_DRAFT = 'draft';
