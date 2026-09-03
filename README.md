@@ -1,58 +1,211 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<!-- ================= HEADER ================= -->
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:17352D,50:285348,100:6D9E69&height=220&section=header&text=Web%20Accounting%20Management%20System&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=40&desc=Ruang%20kerja%20digital%20untuk%20pembukuan%20dan%20laporan%20keuangan&descAlignY=60&descSize=16" width="100%" />
 </p>
 
-## About Laravel
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=19&duration=3000&pause=1000&color=6D9E69&center=true&vCenter=true&width=760&lines=Chart+of+Accounts;Double-entry+Journal;Manager+Approval+Workflow;Financial+Reports" alt="Typing SVG" />
+</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
+</p>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## About the Project
 
-## Learning Laravel
+**Web Accounting Management System (WAMS)** adalah aplikasi web untuk mengelola pembukuan, transaksi jurnal berpasangan, persetujuan manager, dan laporan keuangan dalam satu ruang kerja.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Aplikasi ini membantu accountant mencatat transaksi secara konsisten dan membantu manager meninjau transaksi sebelum diposting. Sistem menggunakan akses berbasis peran dan hanya menghitung jurnal dengan status **posted** pada laporan keuangan.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Project Preview
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+<p align="center">
+  <img src="./documentation/ss-WAMS1%20(1).png" alt="WAMS Dashboard" width="400" />
+  <img src="./documentation/ss-WAMS1%20(2).png" alt="WAMS Chart of Accounts" width="400" />
+  <img src="./documentation/ss-WAMS1%20(3).png" alt="WAMS Journal" width="400" />
+  <img src="./documentation/ss-WAMS1%20(4).png" alt="WAMS General Ledger" width="400" />
+  <img src="./documentation/ss-WAMS1%20(5).png" alt="WAMS Trial Balance" width="400" />
+  <img src="./documentation/ss-WAMS1%20(6).png" alt="WAMS Balance Sheet" width="400" />
+  <img src="./documentation/ss-WAMS1%20(7).png" alt="WAMS Income Statement" width="400" />
+  <img src="./documentation/ss-WAMS1%20(8).png" alt="WAMS Financial Position" width="400" />
+</p>
 
-## Agentic Development
+## Features
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Accounting Workspace
+
+| Feature | Description |
+|---|---|
+| Chart of Accounts | Kelola COA dengan kode, nama, tipe, akun induk, dan status aktif |
+| Journal Entry | Buat jurnal double-entry dengan total debit dan kredit yang seimbang |
+| Draft Management | Edit atau hapus jurnal selama masih berstatus draf |
+| Role-based Access | Accountant membuat dan memposting jurnal; manager melakukan approval |
+
+### Approval Workflow
+
+| Status | Description |
+|---|---|
+| Draft | Jurnal baru yang masih dapat diedit |
+| Pending | Jurnal dikirim accountant untuk ditinjau manager |
+| Approved | Jurnal telah disetujui manager |
+| Posted | Jurnal final dan masuk ke seluruh laporan keuangan |
+
+### File Upload
+
+| Feature | Description |
+|---|---|
+| Supported Format | CSV, XLSX, dan XLS |
+| File Attachment | Menyimpan file unggahan sebagai lampiran jurnal |
+| Approval | File upload dapat disetujui manager tanpa validasi isi file |
+| Upload Limit | Mengikuti konfigurasi upload server, default 2 MB |
+
+### Financial Reports
+
+| Report | Description |
+|---|---|
+| Dashboard | Ringkasan transaksi, pendapatan, beban, dan laba bersih |
+| General Ledger | Riwayat transaksi dan saldo berjalan per akun |
+| Trial Balance | Perbandingan total debit dan kredit |
+| Balance Sheet | Aset, kewajiban, ekuitas, dan laba bersih |
+| Income Statement | Pendapatan, beban, dan laba bersih periode tertentu |
+| Financial Position | Ringkasan posisi keuangan dan status keseimbangan |
+
+## Tech Stack
+
+### Frontend
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Inertia.js-9553E9?style=for-the-badge&logo=inertia&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
+</p>
+
+### Backend and Database
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" />
+  <img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" />
+  <img src="https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white" />
+  <img src="https://img.shields.io/badge/PhpSpreadsheet-217346?style=for-the-badge&logo=microsoftexcel&logoColor=white" />
+</p>
+
+### Tools
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/PHPUnit-366488?style=for-the-badge&logo=phpunit&logoColor=white" />
+  <img src="https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white" />
+  <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" />
+</p>
+
+## Getting Started
+
+### Requirements
+
+- PHP 8.3 atau lebih baru
+- Composer
+- Node.js dan npm
+- SQLite atau database yang kompatibel dengan konfigurasi Laravel
+
+### Installation
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/Arif-AD/AccountingManagementSystem.git
+cd AccountingManagementSystem
+composer install
+npm install
+copy .env.example .env
+php artisan key:generate
+php artisan migrate:fresh --seed
+npm run build
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Untuk Windows PowerShell, gunakan `Copy-Item .env.example .env` jika perintah `copy` tidak tersedia.
 
-## Contributing
+Jalankan aplikasi:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan serve
+```
 
-## Code of Conduct
+Buka `http://127.0.0.1:8000`.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Demo Accounts
 
-## Security Vulnerabilities
+| Role | Email | Password |
+|---|---|---|
+| Accountant | `accountant@example.com` | `password` |
+| Manager | `manager@example.com` | `password` |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Journal Workflow
+
+1. Login sebagai **Akuntan**.
+2. Buka menu **Jurnal** dan pilih **Buat jurnal**.
+3. Pilih minimal dua akun dan isi nilai debit/kredit.
+4. Pastikan total debit sama dengan total kredit.
+5. Simpan sebagai draf.
+6. Buka detail jurnal dan pilih **Kirim untuk persetujuan**.
+7. Login sebagai **Manager**, buka jurnal pending, lalu pilih **Setujui**.
+8. Login kembali sebagai **Akuntan**, lalu pilih **Posting**.
+9. Buka menu laporan untuk melihat transaksi yang sudah diposting.
+
+Jurnal upload file disimpan sebagai attachment dan tidak membuat baris debit/kredit otomatis.
+
+## Minimal COA
+
+Seeder menyediakan COA ringkas yang mencakup seluruh kelompok laporan:
+
+| Code | Account | Type |
+|---|---|---|
+| 1100 | Kas | Asset |
+| 2100 | Utang Usaha | Liability |
+| 3100 | Modal Pemilik | Equity |
+| 4100 | Pendapatan Jasa | Revenue |
+| 5100 | Beban Gaji | Expense |
+| 5200 | Beban Sewa | Expense |
+
+## Architecture
+
+```text
++---------------------------------+
+|       React + TypeScript UI     |
+|       Inertia.js + Tailwind     |
++----------------+----------------+
+                 | Inertia requests
+                 v
++---------------------------------+
+|        Laravel Application      |
+| Controllers - Models - Policies |
++----------------+----------------+
+                 | Eloquent ORM
+                 v
++---------------------------------+
+|       SQLite / Configured DB    |
+| COA - Journals - Approval Data  |
++---------------------------------+
+```
+
+## Testing
+
+```bash
+php artisan test
+npm run build
+```
+
+## Security Notes
+
+- Jangan commit file `.env`, credential, database lokal, atau file upload pengguna.
+- File upload disimpan pada `storage/app/private` dan tidak dilacak Git.
+- Gunakan password yang berbeda untuk environment production.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Project ini menggunakan struktur aplikasi Laravel dan dilisensikan sesuai kebutuhan pengembangan proyek.
