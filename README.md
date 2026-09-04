@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" />
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white" />
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
 </p>
 
@@ -41,41 +41,41 @@ Aplikasi ini membantu accountant mencatat transaksi secara konsisten dan membant
 
 ### Accounting Workspace
 
-| Feature | Description |
-|---|---|
-| Chart of Accounts | Kelola COA dengan kode, nama, tipe, akun induk, dan status aktif |
-| Journal Entry | Buat jurnal double-entry dengan total debit dan kredit yang seimbang |
-| Draft Management | Edit atau hapus jurnal selama masih berstatus draf |
+| Feature           | Description                                                          |
+| ----------------- | -------------------------------------------------------------------- |
+| Chart of Accounts | Kelola COA dengan kode, nama, tipe, akun induk, dan status aktif     |
+| Journal Entry     | Buat jurnal double-entry dengan total debit dan kredit yang seimbang |
+| Draft Management  | Edit atau hapus jurnal selama masih berstatus draf                   |
 | Role-based Access | Accountant membuat dan memposting jurnal; manager melakukan approval |
 
 ### Approval Workflow
 
-| Status | Description |
-|---|---|
-| Draft | Jurnal baru yang masih dapat diedit |
-| Pending | Jurnal dikirim accountant untuk ditinjau manager |
-| Approved | Jurnal telah disetujui manager |
-| Posted | Jurnal final dan masuk ke seluruh laporan keuangan |
+| Status   | Description                                        |
+| -------- | -------------------------------------------------- |
+| Draft    | Jurnal baru yang masih dapat diedit                |
+| Pending  | Jurnal dikirim accountant untuk ditinjau manager   |
+| Approved | Jurnal telah disetujui manager                     |
+| Posted   | Jurnal final dan masuk ke seluruh laporan keuangan |
 
 ### File Upload
 
-| Feature | Description |
-|---|---|
-| Supported Format | CSV, XLSX, dan XLS |
-| File Attachment | Menyimpan file unggahan sebagai lampiran jurnal |
-| Approval | File upload dapat disetujui manager tanpa validasi isi file |
-| Upload Limit | Mengikuti konfigurasi upload server, default 2 MB |
+| Feature          | Description                                                 |
+| ---------------- | ----------------------------------------------------------- |
+| Supported Format | CSV, XLSX, dan XLS                                          |
+| File Attachment  | Menyimpan file unggahan sebagai lampiran jurnal             |
+| Approval         | File upload dapat disetujui manager tanpa validasi isi file |
+| Upload Limit     | Mengikuti konfigurasi upload server, default 2 MB           |
 
 ### Financial Reports
 
-| Report | Description |
-|---|---|
-| Dashboard | Ringkasan transaksi, pendapatan, beban, dan laba bersih |
-| General Ledger | Riwayat transaksi dan saldo berjalan per akun |
-| Trial Balance | Perbandingan total debit dan kredit |
-| Balance Sheet | Aset, kewajiban, ekuitas, dan laba bersih |
-| Income Statement | Pendapatan, beban, dan laba bersih periode tertentu |
-| Financial Position | Ringkasan posisi keuangan dan status keseimbangan |
+| Report             | Description                                             |
+| ------------------ | ------------------------------------------------------- |
+| Dashboard          | Ringkasan transaksi, pendapatan, beban, dan laba bersih |
+| General Ledger     | Riwayat transaksi dan saldo berjalan per akun           |
+| Trial Balance      | Perbandingan total debit dan kredit                     |
+| Balance Sheet      | Aset, kewajiban, ekuitas, dan laba bersih               |
+| Income Statement   | Pendapatan, beban, dan laba bersih periode tertentu     |
+| Financial Position | Ringkasan posisi keuangan dan status keseimbangan       |
 
 ## Tech Stack
 
@@ -93,7 +93,7 @@ Aplikasi ini membantu accountant mencatat transaksi secara konsisten dan membant
 <p align="center">
   <img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" />
   <img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" />
-  <img src="https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white" />
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
   <img src="https://img.shields.io/badge/PhpSpreadsheet-217346?style=for-the-badge&logo=microsoftexcel&logoColor=white" />
 </p>
 
@@ -110,10 +110,10 @@ Aplikasi ini membantu accountant mencatat transaksi secara konsisten dan membant
 
 ### Requirements
 
-- PHP 8.3 atau lebih baru
-- Composer
-- Node.js dan npm
-- SQLite atau database yang kompatibel dengan konfigurasi Laravel
+* PHP 8.3 atau lebih baru
+* Composer
+* Node.js dan npm
+* MySQL 8.0 atau lebih baru
 
 ### Installation
 
@@ -124,6 +124,22 @@ composer install
 npm install
 copy .env.example .env
 php artisan key:generate
+```
+
+Buat database MySQL terlebih dahulu, kemudian sesuaikan konfigurasi database pada file `.env`:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=db_accounting_system
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Setelah konfigurasi database selesai, jalankan migration dan seeder:
+
+```bash
 php artisan migrate:fresh --seed
 npm run build
 ```
@@ -140,10 +156,10 @@ Buka `http://127.0.0.1:8000`.
 
 ### Demo Accounts
 
-| Role | Email | Password |
-|---|---|---|
+| Role       | Email                    | Password   |
+| ---------- | ------------------------ | ---------- |
 | Accountant | `accountant@example.com` | `password` |
-| Manager | `manager@example.com` | `password` |
+| Manager    | `manager@example.com`    | `password` |
 
 ## Journal Workflow
 
@@ -163,14 +179,14 @@ Jurnal upload file disimpan sebagai attachment dan tidak membuat baris debit/kre
 
 Seeder menyediakan COA ringkas yang mencakup seluruh kelompok laporan:
 
-| Code | Account | Type |
-|---|---|---|
-| 1100 | Kas | Asset |
-| 2100 | Utang Usaha | Liability |
-| 3100 | Modal Pemilik | Equity |
-| 4100 | Pendapatan Jasa | Revenue |
-| 5100 | Beban Gaji | Expense |
-| 5200 | Beban Sewa | Expense |
+| Code | Account         | Type      |
+| ---- | --------------- | --------- |
+| 1100 | Kas             | Asset     |
+| 2100 | Utang Usaha     | Liability |
+| 3100 | Modal Pemilik   | Equity    |
+| 4100 | Pendapatan Jasa | Revenue   |
+| 5100 | Beban Gaji      | Expense   |
+| 5200 | Beban Sewa      | Expense   |
 
 ## Architecture
 
@@ -188,7 +204,7 @@ Seeder menyediakan COA ringkas yang mencakup seluruh kelompok laporan:
                  | Eloquent ORM
                  v
 +---------------------------------+
-|       SQLite / Configured DB    |
+|             MySQL               |
 | COA - Journals - Approval Data  |
 +---------------------------------+
 ```
@@ -202,9 +218,9 @@ npm run build
 
 ## Security Notes
 
-- Jangan commit file `.env`, credential, database lokal, atau file upload pengguna.
-- File upload disimpan pada `storage/app/private` dan tidak dilacak Git.
-- Gunakan password yang berbeda untuk environment production.
+* Jangan commit file `.env`, credential, database lokal, atau file upload pengguna.
+* File upload disimpan pada `storage/app/private` dan tidak dilacak Git.
+* Gunakan password yang berbeda untuk environment production.
 
 ## License
 
