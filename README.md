@@ -20,7 +20,7 @@
 
 ## About the Project
 
-**Web Accounting Management System (WAMS)** adalah aplikasi web untuk mengelola pembukuan, transaksi jurnal berpasangan, persetujuan manager, dan laporan keuangan dalam satu ruang kerja.
+**Web Accounting Management System (WAMS)** adalah aplikasi web untuk mengelola pembukuan, jurnal, persetujuan manager, dan laporan keuangan dalam satu ruang kerja.
 
 Aplikasi ini membantu accountant mencatat transaksi secara konsisten dan membantu manager meninjau transaksi sebelum diposting. Sistem menggunakan akses berbasis peran dan hanya menghitung jurnal dengan status **posted** pada laporan keuangan.
 
@@ -215,13 +215,3 @@ Seeder menyediakan COA ringkas yang mencakup seluruh kelompok laporan:
 php artisan test
 npm run build
 ```
-
-## Security Notes
-
-* Jangan commit file `.env`, credential, database lokal, atau file upload pengguna.
-* File upload disimpan pada `storage/app/private` dan tidak dilacak Git.
-* Gunakan password yang berbeda untuk environment production.
-
-## License
-
-Project ini menggunakan struktur aplikasi Laravel dan dilisensikan sesuai kebutuhan pengembangan proyek.
